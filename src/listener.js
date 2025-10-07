@@ -243,7 +243,6 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("✅ Conectado a MongoDB");
-    await syncPastEvents();  // primero recorre lo viejo (hasta head)
-    await startListener();   // luego escucha lo nuevo
+   // luego escucha lo nuevo
   })
   .catch(console.error);

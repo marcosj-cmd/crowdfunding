@@ -3,18 +3,19 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import campaignsRoute from "./routes/campaigns.js";
 import { startListener } from "./listener.js";
-
+import { syncPastEvents } from "./syncPastEvents.js";
 dotenv.config();
-require('./listener')
+
 const app = express();
 app.use(express.json());
 
 app.use("/api/campaigns", campaignsRoute);
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log("✅ Conectado a MongoDB");
-    startListener();
+    await syncPastEvents();  // primero recorre lo viejo (hasta head)
+    await startListener();   // luego escucha lo nuevo
     app.listen(process.env.PORT, () =>
       console.log(`🚀 Servidor ejecutándose en http://localhost:${process.env.PORT}`)
     );
