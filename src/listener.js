@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import Campaign from "./models/Campaign.js";
 import SyncState from "./models/SyncState.js";
 import ProcessedEvent from "./models/ProcessedEvent.js";
-import CrowdfundingJson from "../abis/Crowdfunding.json" assert { type: "json" };
+import CrowdfundingJson from "../abis/Crowdfunding.json" with { type: "json" };
 
 // ──────────────────────────────────────────────────────────────
 // Config
