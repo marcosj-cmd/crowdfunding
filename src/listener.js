@@ -238,11 +238,3 @@ process.on("SIGINT", async () => {
   }
 });
 
-// ──────────────────────────────────────────────────────────────
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("✅ Conectado a MongoDB");
-   // luego escucha lo nuevo
-  })
-  .catch(console.error);

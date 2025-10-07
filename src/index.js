@@ -2,8 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import campaignsRoute from "./routes/campaigns.js";
-import { startListener } from "./listener.js";
-import { syncPastEvents } from "./syncPastEvents.js";
+import { startListener, syncPastEvents } from "./listener.js";
 dotenv.config();
 
 const app = express();
