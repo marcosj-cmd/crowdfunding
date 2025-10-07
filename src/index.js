@@ -5,7 +5,7 @@ import campaignsRoute from "./routes/campaigns.js";
 import { startListener } from "./listener.js";
 
 dotenv.config();
-
+require('./listener')
 const app = express();
 app.use(express.json());
 
