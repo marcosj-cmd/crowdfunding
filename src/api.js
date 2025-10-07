@@ -19,7 +19,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use("/api/campaigns", campaignsRouter);
 
 // 🏁 Iniciar servidor
-const PORT = process.env.PORT || 3010;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 API corriendo en http://localhost:${PORT}`);
 });
