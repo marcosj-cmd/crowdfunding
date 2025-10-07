@@ -10,6 +10,11 @@ app.use(express.json());
 
 app.use("/api/campaigns", campaignsRoute);
 
+// Ruta principal de bienvenida
+app.get("/", (req, res) => {
+  res.send("Bienvenido a la API de Crowdfunding");
+});
+
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("✅ Conectado a MongoDB");
