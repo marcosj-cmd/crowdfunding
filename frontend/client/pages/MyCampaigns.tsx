@@ -101,7 +101,7 @@ export default function MyCampaigns() {
           </div>
         ) : (
           <div>
-            <div className="rounded-lg border bg-card p-4">
+            <div className="rounded-lg border bg-card p-4 max-h-[60vh] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

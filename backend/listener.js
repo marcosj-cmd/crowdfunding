@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 
 import Campaign from "./models/Campaign.js";
 import SyncState from "./models/SyncState.js";
-import ProcessedEvent from "./models/ProcessedEvent.js";
 import CrowdfundingJson from "../abis/Crowdfunding.json" with { type: "json" };
 import Contribution from "./models/Contribution.js";
 
@@ -57,9 +56,7 @@ export const startListener = async () => {
   // CampaignCreated
   contract.on("CampaignCreated", async (id, owner, goal, deadline, ev) => {
     try {
-      const log = ev?.log ?? ev; // ethers v6 pasa EventLog, a veces con .log
-      const evId = eventIdOf(log);
-      if (await ProcessedEvent.findById(evId)) return;
+     
 
       // Formatear goal y funds a ETH (string decimal), deadline a milisegundos
       const goalEth = ethers.formatEther(goal);
@@ -77,7 +74,7 @@ export const startListener = async () => {
         { upsert: true }
       );
 
-      await ProcessedEvent.create({ _id: evId });
+   
       await handleBlockPersist(ev);
       console.log(`📢 Nueva campaña creada: ID ${id}, owner ${owner}`);
     } catch (err) {
