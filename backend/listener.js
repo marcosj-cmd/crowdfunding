@@ -168,7 +168,7 @@ export async function syncPastEvents() {
   const STEP = Number(process.env.SYNC_STEP ?? 1000);
   const DELAY = Number(process.env.SYNC_DELAY_MS ?? 300);
 
-  for (let from =  lastBlock + 1; from <= head; from += STEP) {
+  for (let from =  DEPLOY_BLOCK + 1; from <= head; from += STEP) {
     const to = Math.min(from + STEP - 1, head);
     console.log(`🔎 Leyendo eventos entre bloques ${from} → ${to}`);
 
