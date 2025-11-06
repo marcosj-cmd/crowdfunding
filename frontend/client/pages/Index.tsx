@@ -24,7 +24,7 @@ async function fetchProjects(page: number, limit = PAGE_LIMIT, base = "") {
 export default function Index() {
   const [page, setPage] = useState(1);
 
-  const apiBase = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+  const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
  const { data, isLoading, isError, isFetching } = useQuery({
   queryKey: ["projects", page],
