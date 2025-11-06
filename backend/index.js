@@ -5,13 +5,16 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import campaignsRoute from "./routes/campaigns.js";
+import contributionsRouter from "./routes/contributions.js";
 import { startListener, syncPastEvents } from "./listener.js";
 dotenv.config();
+
 
 const app = express();
 app.use(express.json());
 
 app.use("/api/campaigns", campaignsRoute);
+app.use("/api", contributionsRouter);
 
 // Static frontend serving (prefer built SPA in public/dist/spa)
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +22,7 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, "../public");
 const spaBuiltDir = path.join(publicDir, "dist", "spa");
 const staticDir = fs.existsSync(path.join(spaBuiltDir, "index.html")) ? spaBuiltDir : publicDir;
+app.use(express.static(path.join(__dirname, '../public/dist/spa')));
 
 app.use(express.static(staticDir));
 

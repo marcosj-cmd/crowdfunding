@@ -6,6 +6,7 @@ import Campaign from "./models/Campaign.js";
 import SyncState from "./models/SyncState.js";
 import ProcessedEvent from "./models/ProcessedEvent.js";
 import CrowdfundingJson from "../abis/Crowdfunding.json" with { type: "json" };
+import Contribution from "./models/Contribution.js";
 
 // ──────────────────────────────────────────────────────────────
 // Config
@@ -60,14 +61,17 @@ export const startListener = async () => {
       const evId = eventIdOf(log);
       if (await ProcessedEvent.findById(evId)) return;
 
+      // Formatear goal y funds a ETH (string decimal), deadline a milisegundos
+      const goalEth = ethers.formatEther(goal);
+      const deadlineMs = Number(deadline) * 1000;
       await Campaign.updateOne(
         { id: Number(id) },
         {
           id: Number(id),
           owner,
-          goal: goal.toString(),
-          deadline: Number(deadline),
-          funds: (0n).toString(),
+          goal: goalEth, // ETH como string decimal
+          deadline: deadlineMs, // timestamp en ms
+          funds: "0.0", // ETH como string decimal
           withdrawn: false,
         },
         { upsert: true }
@@ -90,11 +94,20 @@ export const startListener = async () => {
 
       const campaign = await Campaign.findOne({ id: Number(id) });
       if (campaign) {
-        campaign.funds = (
-          BigInt(campaign.funds ?? "0") + BigInt(amount)
-        ).toString();
+        // funds y amount ya están en ETH string decimal
+        const prevFunds = parseFloat(campaign.funds ?? "0");
+        const amountEth = parseFloat(ethers.formatEther(amount));
+        const newFunds = (prevFunds + amountEth).toFixed(6); // 6 decimales
+        campaign.funds = newFunds;
         await campaign.save();
-        console.log(`✅ Fondos actualizados en campaña ${id}: ${campaign.funds}`);
+        console.log(`✅ Fondos actualizados en campaña ${id}: ${campaign.funds} ETH`);
+          // Guardar la contribución en la base de datos
+          await Contribution.create({
+            owner: contributor,
+            campaignId: Number(id),
+            amount: amountEth,
+            timestamp: new Date(),
+          });
       } else {
         console.warn(`⚠️ Campaña ${id} no encontrada en la base de datos`);
       }
@@ -116,6 +129,7 @@ export const startListener = async () => {
 
       const campaign = await Campaign.findOne({ id: Number(id) });
       if (campaign) {
+        campaign.funds = "0.0";
         campaign.withdrawn = true;
         await campaign.save();
       }
@@ -154,7 +168,7 @@ export async function syncPastEvents() {
   const STEP = Number(process.env.SYNC_STEP ?? 1000);
   const DELAY = Number(process.env.SYNC_DELAY_MS ?? 300);
 
-  for (let from = DEPLOY + 1; from <= head; from += STEP) {
+  for (let from =  lastBlock + 1; from <= head; from += STEP) {
     const to = Math.min(from + STEP - 1, head);
     console.log(`🔎 Leyendo eventos entre bloques ${from} → ${to}`);
 
@@ -180,14 +194,16 @@ export async function syncPastEvents() {
 
         if (name === "CampaignCreated") {
           const [id, owner, goal, deadline] = args;
+          const goalEth = ethers.formatEther(goal);
+          const deadlineMs = Number(deadline) * 1000;
           await Campaign.updateOne(
             { id: Number(id) },
             {
               id: Number(id),
               owner,
-              goal: goal.toString(),
-              deadline: Number(deadline),
-              funds: (0n).toString(),
+              goal: goalEth,
+              deadline: deadlineMs,
+              funds: "0.0",
               withdrawn: false,
             },
             { upsert: true }
@@ -196,16 +212,25 @@ export async function syncPastEvents() {
           const [id, contributor, amount] = args;
           const campaign = await Campaign.findOne({ id: Number(id) });
           if (campaign) {
-            campaign.funds = (
-              BigInt(campaign.funds ?? "0") + BigInt(amount)
-            ).toString();
+            const prevFunds = parseFloat(campaign.funds ?? "0");
+            const amountEth = parseFloat(ethers.formatEther(amount));
+            const newFunds = (prevFunds + amountEth).toFixed(6);
+            campaign.funds = newFunds;
             await campaign.save();
-          console.log(`💰 Contribución: campaña ${id}, ${amount} wei, de ${contributor}`);
+            console.log(`💰 Contribución: campaña ${id}, ${amountEth} ETH, de ${contributor}`);
+              // Guardar la contribución en la base de datos
+              await Contribution.create({
+                owner: contributor,
+                campaignId: Number(id),
+                amount: amountEth,
+                timestamp: new Date(),
+              });
           }
         } else if (name === "FundsWithdrawn") {
           const [id, amount] = args;
           const campaign = await Campaign.findOne({ id: Number(id) });
           if (campaign) {
+            campaign.funds = "0.0";
             campaign.withdrawn = true;
             await campaign.save();
           }

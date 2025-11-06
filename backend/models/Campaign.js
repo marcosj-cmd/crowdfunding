@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const CampaignSchema = new mongoose.Schema({
   id: { type: Number, required: true },
   owner: String,
-  goal: String,
+  goal: Number,
   funds: Number,
   deadline: Number,
   withdrawn: Boolean

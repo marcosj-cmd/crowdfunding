@@ -12,6 +12,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import Placeholder from "@/pages/Placeholder";
 import Create from "./pages/Create";
 import MyCampaigns from "./pages/MyCampaigns";
+import MyContributions from "./pages/MyContributions";
+import CampaignDetails from "./pages/CampaignDetails";
 
 const queryClient = new QueryClient();
 
@@ -25,8 +27,9 @@ const App = () => (
           <Route element={<MainLayout />}>
             <Route path="/" element={<Index />} />
             <Route path="/my-campaigns" element={<MyCampaigns />} />
+            <Route path="/my-contributions" element={<MyContributions />} />
+            <Route path="/campaigns/:id" element={<CampaignDetails />} />
             <Route path="/create" element={<Create />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
@@ -35,4 +38,11 @@ const App = () => (
   </QueryClientProvider>
 );
 
-createRoot(document.getElementById("root")!).render(<App />);
+{
+  const container = document.getElementById("root");
+  // Prevent double createRoot during HMR / hot reloads
+  const globalAny: any = window;
+  const root = globalAny.__appRoot || createRoot(container!);
+  if (!globalAny.__appRoot) globalAny.__appRoot = root;
+  root.render(<App />);
+}

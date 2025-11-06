@@ -1,37 +1,33 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Modal from "@/components/ui/Modal";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { ethers } from "ethers";
 
-export interface Campaign {
-  id: string;
-  title: string;
-  creator: string;
-  image: string;
-  category: string;
-  goal: number;
-  raised: number;
-  daysLeft: number;
-}
 
-export default function CampaignCard({ campaign }: { campaign: Campaign }) {
-  const [raised, setRaised] = useState<number>(campaign.raised || 0);
-  const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState<string>("");
 
-  const pct = Math.min(100, Math.round((raised / campaign.goal) * 100));
+ export type Campaign = {
+   id: number;
+   title: string;
+   owner: string;
+   image: string;
+   category: string;
+   goal: number;
+   funds: number;
+   deadline: number;
+ };
 
-  const handleConfirm = () => {
-    const v = parseFloat(amount);
-    if (isNaN(v) || v <= 0) {
-      window.alert("Please enter a valid amount in ETH.");
-      return;
-    }
-    setRaised((r) => r + v);
-    window.alert(`Thank you for contributing ${v} ETH to ${campaign.title} (simulated).`);
-    setAmount("");
-  };
+ export default function CampaignCard({ campaign }: { campaign: Campaign }) {
+  const [raised, setRaised] = useState<number>(campaign.funds|| 0);
+
+  // Calcular daysLeft y fecha a partir de deadline
+
+  const daysLeft = Math.max(0, Math.floor((Number(campaign.deadline) - Date.now()) / (1000 * 60 * 60 * 24)));
+  const fecha = new Date(Number(campaign.deadline) * 1000);
+
+const pct = campaign.goal > 0 ? Math.min(100, Math.round((campaign.funds / campaign.goal) * 100)) : 0;
+
 
   return (
     <>
@@ -42,7 +38,7 @@ export default function CampaignCard({ campaign }: { campaign: Campaign }) {
         <CardContent className="p-5 space-y-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">{campaign.category}</span>
-            <span>by {campaign.creator}</span>
+            <span>by {campaign.owner}</span>
           </div>
           <h3 className="text-base font-semibold leading-tight">{campaign.title}</h3>
           <div className="space-y-2">
@@ -53,22 +49,17 @@ export default function CampaignCard({ campaign }: { campaign: Campaign }) {
               />
             </div>
             <div className="flex items-center justify-between text-sm">
-              <div className="font-semibold">{raised.toFixed(3)} ETH</div>
+            <div className="font-semibold">{Number(campaign.goal)} ETH</div>
               <div className="text-muted-foreground">{pct}%</div>
-              <div className="text-muted-foreground">{campaign.daysLeft} days left</div>
+              <div className="text-muted-foreground">{daysLeft} days left</div>
             </div>
           </div>
-          <Button className="w-full bg-foreground text-background hover:bg-foreground/90" onClick={() => setOpen(true)}>Back this project</Button>
+          <Link to={`/campaigns/${campaign.id}`}>
+            <Button className="w-full bg-foreground text-background hover:bg-foreground/90">Ver campaña</Button>
+          </Link>
         </CardContent>
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={`Contribute to "${campaign.title}"`} onConfirm={handleConfirm} confirmLabel="Contribute">
-        <div>
-          <label className="block text-sm font-medium mb-2">Amount (ETH)</label>
-          <input className="w-full rounded-md border border-input px-3 py-2 bg-background" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 0.05" />
-          <p className="mt-2 text-sm text-muted-foreground">The contribution is simulated locally for now (no real transaction).</p>
-        </div>
-      </Modal>
     </>
   );
 }

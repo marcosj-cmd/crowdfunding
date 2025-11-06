@@ -1,8 +1,22 @@
+import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import CampaignCard, { type Campaign } from "@/components/crowdfunding/CampaignCard";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { useQuery } from "@tanstack/react-query";
+import CampaignCard, { type Campaign } from "@/components/crowdfunding/CampaignCard";
+import crowdfundingAbi from "@/../../abis/Crowdfunding.json";
+
+const CONTRACT_ADDRESS = "0x3cebA30E37c91E6CD74d84d5Ce0d18c8248aaF59";
+
+async function fetchCampaignsForOwner(owner: string | null) {
+  if (!owner) return [];
+  const res = await fetch(`/api/campaigns/paginated?owner=${owner}`);
+  if (!res.ok) throw new Error("no-api");
+  const json = await res.json();
+  const items = json?.items ?? json?.data ?? (Array.isArray(json) ? json : []);
+  return items as Campaign[];
+}
 
 export default function MyCampaigns() {
   const [account, setAccount] = useState<string | null>(null);
@@ -34,29 +48,33 @@ export default function MyCampaigns() {
     };
   }, []);
 
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["myCampaigns", account],
+    queryFn: () => fetchCampaignsForOwner(account),
+    enabled: !!account,
+  });
+
   useEffect(() => {
     if (!account) {
       setCampaigns([]);
       return;
     }
-    const key = `sf_campaigns_${account}`;
+    setCampaigns(data ?? []);
+  }, [account, data]);
+  // Función para withdraw
+  const handleWithdraw = async (id: number) => {
     try {
-      const raw = localStorage.getItem(key) || "[]";
-      const parsed = JSON.parse(raw) as Campaign[];
-      setCampaigns(parsed);
-    } catch (e) {
-      setCampaigns([]);
+      if (!(window as any).ethereum) throw new Error("No wallet detected");
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, crowdfundingAbi, signer);
+      const tx = await contract.withdrawFunds(id);
+      await tx.wait();
+      alert("Withdraw realizado con éxito");
+      await refetch();
+    } catch (err: any) {
+      alert("Error al hacer withdraw: " + (err?.message || err));
     }
-  }, [account]);
-
-  const handleDelete = (id: string) => {
-    if (!account) return;
-    const key = `sf_campaigns_${account}`;
-    const raw = localStorage.getItem(key) || "[]";
-    const parsed = JSON.parse(raw) as Campaign[];
-    const filtered = parsed.filter((c) => c.id !== id);
-    localStorage.setItem(key, JSON.stringify(filtered));
-    setCampaigns(filtered);
   };
 
   return (
@@ -70,6 +88,8 @@ export default function MyCampaigns() {
           <div className="p-6 rounded-lg border bg-card text-card-foreground">
             <p className="text-sm">Connect your wallet to view and manage your campaigns.</p>
           </div>
+        ) : isLoading ? (
+          <div className="p-6 rounded-lg border bg-card text-card-foreground">Loading...</div>
         ) : campaigns.length === 0 ? (
           <div className="p-6 rounded-lg border bg-card text-card-foreground">
             <p className="text-sm">You have no campaigns yet.</p>
@@ -85,35 +105,50 @@ export default function MyCampaigns() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead>Campaign </TableHead>
+                    <TableHead>Campaign ID</TableHead>
                     <TableHead>Goal</TableHead>
                     <TableHead>Raised</TableHead>
-                    <TableHead>Ends in</TableHead>
+                    <TableHead>Ends at</TableHead>
+                     <TableHead>daysleft</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaigns.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="flex items-center gap-3">
-                        <img src={c.image} alt={c.title} className="h-12 w-16 object-cover rounded-md" />
-                        <div>
-                          <div className="font-medium">{c.title}</div>
-                          <div className="text-xs text-muted-foreground">by {c.creator}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{c.category}</TableCell>
-                      <TableCell>{c.goal.toFixed(3)} ETH</TableCell>
-                      <TableCell>{c.raised.toFixed(3)} ETH</TableCell>
-                      <TableCell>{c.daysLeft} days</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button className="bg-red-600 text-white" onClick={() => handleDelete(c.id)}>Delete</Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {campaigns.map((c) => {
+                    const daysLeft = Math.max(0, Math.floor((Number(c.deadline) - Date.now()) / (1000 * 60 * 60 * 24)));
+                    const fecha = new Date(Number(c.deadline));
+                    // Permitir withdraw apenas se alcance el goal
+                    const canWithdraw = Number(c.funds) >= Number(c.goal);
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="flex items-center gap-3">
+                          <img src={c.image} alt={c.title} className="h-12 w-16 object-cover rounded-md" />
+                          <div>
+                            <div className="font-medium">{c.title}</div>
+                            <div className="text-xs text-muted-foreground">by {c.owner}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{c.id} </TableCell>
+                        <TableCell>{Number(c.funds).toFixed(6)} ETH</TableCell>
+                        <TableCell>{Number(c.goal).toFixed(6)} ETH</TableCell>
+                        <TableCell>{daysLeft} days</TableCell>
+                        <TableCell>{fecha.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Button
+                            className="bg-green-600 text-white"
+                            disabled={!canWithdraw}
+                            onClick={() => handleWithdraw(c.id)}
+                          >
+                            Withdraw
+                          </Button>
+                          {!canWithdraw && (
+                            <div className="text-xs text-muted-foreground mt-1">No se alcanzó el goal</div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

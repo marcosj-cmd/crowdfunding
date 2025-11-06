@@ -52,22 +52,33 @@ export default function ConnectMetamask() {
         throw new Error("Wallet does not support request/enable methods");
       }
     } catch (err: any) {
-      // Normalize error message
-      let msg = "Connection to MetaMask failed.";
-      try {
-        if (!err) msg = String(err);
-        else if (typeof err === "string") msg = err;
-        else if (err.message) msg = err.message;
-        else msg = JSON.stringify(err);
-      } catch (e) {
-        msg = "Unknown error connecting to MetaMask.";
-      }
+      // Improved normalization for different provider error shapes
+      const parseError = (e: any) => {
+        if (!e) return String(e);
+        if (typeof e === "string") return e;
+        try {
+          // Some providers return { code, message } or nested structures
+          if (typeof e === "object") {
+            if ((e as any).code === 4001) return "MetaMask request was rejected by the user.";
+            const nested = e?.data?.message || e?.error?.message || e?.message || e?.reason || e?.stack;
+            if (nested) return typeof nested === "string" ? nested : String(nested);
+            // Fallback to JSON with safe handling of Error instances
+            return JSON.stringify(e, (k, v) => (v instanceof Error ? v.message : v));
+          }
+        } catch (ex) {
+          // ignore
+        }
+        return Object.prototype.toString.call(e);
+      };
+
+      const msg = parseError(err);
       console.error("MetaMask connect error:", err);
-      // Show a friendly message to the user
-      window.alert(msg.includes("user rejected") || msg.includes("User rejected") || msg.includes("4001")
-        ? "MetaMask request was rejected by the user."
-        : `MetaMask connection error: ${msg}`
-      );
+
+      if ((err && (err as any).code === 4001) || String(msg).toLowerCase().includes("user rejected") || String(msg).includes("4001")) {
+        window.alert("MetaMask request was rejected by the user.");
+      } else {
+        window.alert(`MetaMask connection error: ${msg}`);
+      }
     } finally {
       setConnecting(false);
     }

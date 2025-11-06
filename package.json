@@ -1,11 +1,12 @@
 {
   "name": "crowdfunding-indexer",
   "version": "1.0.0",
-  "main": "src/index.js",
+  "main": "backend/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node backend/index.js",
+    "dev": "nodemon backend/index.js",
+    "build:client": "vite build",
     "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix frontend && npm run build:client --prefix frontend"
   },
   "dependencies": {
