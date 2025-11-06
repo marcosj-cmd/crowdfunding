@@ -47,8 +47,8 @@ export default function MyContributions() {
           <p className="text-sm">{!account ? "Conecta tu wallet para ver tus aportes." : "No tienes aportes registrados."}</p>
         </div>
       ) : (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="max-h-[60vh] overflow-y-auto">
+        <div>
+          <div className="rounded-lg border bg-card p-4 max-h-[60vh] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -85,9 +85,7 @@ export const startListener = async () => {
   // Contribution
   contract.on("Contribution", async (id, contributor, amount, ev) => {
     try {
-      const log = ev?.log ?? ev;
-      const evId = eventIdOf(log);
-      if (await ProcessedEvent.findById(evId)) return;
+ 
 
       const campaign = await Campaign.findOne({ id: Number(id) });
       if (campaign) {
