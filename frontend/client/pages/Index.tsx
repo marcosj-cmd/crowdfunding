@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import CampaignCard, { type Campaign } from "@/components/crowdfunding/CampaignCard";
 
-const PAGE_LIMIT = 3;
+const PAGE_LIMIT = 9;
 
 async function fetchProjects(page: number, limit = PAGE_LIMIT, base = "") {
   const params = new URLSearchParams();
