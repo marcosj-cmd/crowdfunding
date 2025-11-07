@@ -6,15 +6,13 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { useQuery } from "@tanstack/react-query";
 import CampaignCard, { type Campaign } from "@/components/crowdfunding/CampaignCard";
 import crowdfundingAbi from "@/../../abis/Crowdfunding.json";
-
+import axios from 'axios';
 const CONTRACT_ADDRESS = "0x3cebA30E37c91E6CD74d84d5Ce0d18c8248aaF59";
 
 async function fetchCampaignsForOwner(owner: string | null) {
   if (!owner) return [];
-  const res = await fetch(`/api/campaigns/paginated?owner=${owner}`);
-  if (!res.ok) throw new Error("no-api");
-  const json = await res.json();
-  const items = json?.items ?? json?.data ?? (Array.isArray(json) ? json : []);
+  const res = await axios.get(`/api/campaigns/paginated?owner=${owner}`);
+  const items = res.data?.items ?? res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
   return items as Campaign[];
 }
 
