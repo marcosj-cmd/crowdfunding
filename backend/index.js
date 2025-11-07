@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, "../public");
 const spaBuiltDir = path.join(publicDir, "dist", "spa");
 const staticDir = fs.existsSync(path.join(spaBuiltDir, "index.html")) ? spaBuiltDir : publicDir;
-app.use(express.static(path.join(__dirname, '../public/dist/spa')));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 app.use(express.static(staticDir));
 

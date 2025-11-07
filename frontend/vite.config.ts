@@ -1,7 +1,7 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { createServer } from "./server";
+
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -14,10 +14,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Output compiled SPA into the backend's public folder
-    outDir: "../public/dist/spa",
+    // Output compiled SPA into the frontend's dist folder
+    outDir: "dist",
   },
-  plugins: [react(), expressPlugin()],
+  plugins: [react()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./client"),
@@ -25,16 +25,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
-
-function expressPlugin(): Plugin {
-  return {
-    name: "express-plugin",
-    apply: "serve", // Only apply during development (serve mode)
-    configureServer(server) {
-      const app = createServer();
-
-      // Add Express app as middleware to Vite dev server
-      server.middlewares.use(app);
-    },
-  };
-}
