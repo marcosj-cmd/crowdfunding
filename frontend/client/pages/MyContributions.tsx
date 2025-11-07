@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 type Contribution = {
@@ -32,10 +33,12 @@ export default function MyContributions() {
       setContributions([]);
       return;
     }
-    // Consulta la API para obtener las contribuciones del usuario
-    fetch(`/api/contributions?owner=${account}`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setContributions(Array.isArray(data) ? data : []))
+    axios
+      .get(`/api/contributions?owner=${account}`)
+      .then(res => {
+        const data = res.data;
+        setContributions(Array.isArray(data) ? data : []);
+      })
       .catch(() => setContributions([]));
   }, [account]);
 
