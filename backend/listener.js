@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import axios from "axios";
 
 import Campaign from "./models/Campaign.js";
 import SyncState from "./models/SyncState.js";
@@ -39,6 +40,26 @@ const iface = new ethers.Interface(ABI);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const eventIdOf = (log) => `${log.transactionHash}-${(log.index ?? log.logIndex)}`;
 
+// Función para obtener metadatos de IPFS
+async function fetchMetadataFromIPFS(ipfsUri) {
+  try {
+    // Convertir ipfs:// a HTTP gateway
+    const httpUrl = ipfsUri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+    
+    const response = await axios.get(httpUrl, { timeout: 10000 });
+    const metadata = response.data;
+    
+    return {
+      title: metadata.name || 'Sin título',
+      description: metadata.description || '',
+      image: metadata.image ? metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : ''
+    };
+  } catch (error) {
+    console.error('Error fetching IPFS metadata:', error.message);
+    return { title: 'Error loading metadata', description: '', image: '' };
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // Listener tiempo real (con dedupe + guardado de lastBlock)
 // ──────────────────────────────────────────────────────────────
@@ -54,27 +75,47 @@ export const startListener = async () => {
   };
 
   // CampaignCreated
+  // ACTUAL: contract.on("CampaignCreated", async (id, owner, goal, deadline, ev) => {
+  // FUTURO: Cuando actualices el contrato, cambia la firma a:
+  // contract.on("CampaignCreated", async (id, owner, title, description, goal, deadline, metadataUri, ev) => {
   contract.on("CampaignCreated", async (id, owner, goal, deadline, ev) => {
     try {
-     
-
-      // Formatear goal y funds a ETH (string decimal), deadline a milisegundos
+      // Formatear goal y deadline
       const goalEth = ethers.formatEther(goal);
       const deadlineMs = Number(deadline) * 1000;
+      const daysLeft = Math.max(0, Math.floor((deadlineMs - Date.now()) / (1000 * 60 * 60 * 24)));
+
+      // Datos básicos del evento (actual)
+      const campaignData = {
+        id: Number(id),
+        owner,
+        goal: goalEth,
+        deadline: deadlineMs,
+        daysLeft: daysLeft,
+        funds: "0.0",
+        withdrawn: false,
+      };
+
+      // DESCOMENTAR cuando actualices el contrato para incluir metadataUri:
+      // campaignData.title = title;
+      // campaignData.description = description;
+      // campaignData.metadataUri = metadataUri;
+      // 
+      // if (metadataUri && metadataUri.startsWith('ipfs://')) {
+      //   try {
+      //     const metadata = await fetchMetadataFromIPFS(metadataUri);
+      //     campaignData.image = metadata.image;
+      //   } catch (err) {
+      //     console.error('Error parsing IPFS metadata:', err);
+      //   }
+      // }
+
       await Campaign.updateOne(
         { id: Number(id) },
-        {
-          id: Number(id),
-          owner,
-          goal: goalEth, // ETH como string decimal
-          deadline: deadlineMs, // timestamp en ms
-          funds: "0.0", // ETH como string decimal
-          withdrawn: false,
-        },
+        campaignData,
         { upsert: true }
       );
 
-   
       await handleBlockPersist(ev);
       console.log(`📢 Nueva campaña creada: ID ${id}, owner ${owner}`);
     } catch (err) {
@@ -85,7 +126,9 @@ export const startListener = async () => {
   // Contribution
   contract.on("Contribution", async (id, contributor, amount, ev) => {
     try {
- 
+      const log = ev?.log ?? ev;
+      const evId = eventIdOf(log);
+      if (await ProcessedEvent.findById(evId)) return;
 
       const campaign = await Campaign.findOne({ id: Number(id) });
       if (campaign) {
@@ -96,13 +139,14 @@ export const startListener = async () => {
         campaign.funds = newFunds;
         await campaign.save();
         console.log(`✅ Fondos actualizados en campaña ${id}: ${campaign.funds} ETH`);
-          // Guardar la contribución en la base de datos
-          await Contribution.create({
-            owner: contributor,
-            campaignId: Number(id),
-            amount: amountEth,
-            timestamp: new Date(),
-          });
+        
+        // Guardar la contribución en la base de datos
+        await Contribution.create({
+          owner: contributor,
+          campaignId: Number(id),
+          amount: amountEth,
+          timestamp: new Date(),
+        });
       } else {
         console.warn(`⚠️ Campaña ${id} no encontrada en la base de datos`);
       }
@@ -155,7 +199,7 @@ export async function syncPastEvents() {
     console.log(`🆕 No hay estado previo (head=${head})`);
   }
 
-  if (DEPLOY >= head) {
+  if (lastBlock>= head) {
     console.log(`✅ Up-to-date (lastBlock=${lastBlock}, head=${head})`);
     return;
   }

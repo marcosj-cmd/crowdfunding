@@ -1,43 +1,29 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import CampaignCard, { type Campaign } from "@/components/crowdfunding/CampaignCard";
+import CampaignCard from "@/components/crowdfunding/CampaignCard";
+import { getCampaigns } from "@/api/backend";
 
 const PAGE_LIMIT = 9;
-
-async function fetchProjects(page: number, limit = PAGE_LIMIT, base = "") {
-  const params = new URLSearchParams();
-  params.set("page", String(page));
-  params.set("limit", String(limit));
-
-  const url = `${base}/api/campaigns/paginated?${params.toString()}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Failed to fetch projects (${res.status})`);
-  }
-  const json = await res.json();
-  const items: Campaign[] = json.data || json.items || json.projects || (Array.isArray(json) ? json : []);
-  const total: number | null = typeof json.total === "number" ? json.total : null;
-  return { items, total };
-}
 
 export default function Index() {
   const [page, setPage] = useState(1);
 
-  const apiBase = import.meta.env.VITE_API_BASE ?? "";
+  const { data, isLoading, isError, isFetching } = useQuery({
+    queryKey: ["campaigns", page],
+    queryFn: () => getCampaigns(),
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 30,
+  });
 
- const { data, isLoading, isError, isFetching } = useQuery({
-  queryKey: ["projects", page],
-  queryFn: () => fetchProjects(page, PAGE_LIMIT, apiBase),
-  placeholderData: (prev) => prev,
-  staleTime: 1000 * 30,
-});
-
-  const projects = data?.items ?? [];
-  const total = data?.total ?? null;
-
-  const totalPages = total ? Math.max(1, Math.ceil(total / PAGE_LIMIT)) : null;
-  const hasNext = totalPages ? page < totalPages : projects.length === PAGE_LIMIT;
+  const campaigns = data ?? [];
+  
+  // Paginación simple del lado del cliente
+  const startIndex = (page - 1) * PAGE_LIMIT;
+  const endIndex = startIndex + PAGE_LIMIT;
+  const paginatedCampaigns = campaigns.slice(startIndex, endIndex);
+  
+  const totalPages = Math.max(1, Math.ceil(campaigns.length / PAGE_LIMIT));
+  const hasNext = page < totalPages;
 
   return (
     <div>
@@ -82,12 +68,12 @@ export default function Index() {
                 <span>Error loading projects</span>
               ) : (
                 <>
-                  <span>Page {page}{totalPages ? ` of ${totalPages}` : ''}</span>
+                  <span>Page {page} of {totalPages}</span>
                   <button
                     aria-label="previous page"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-3 py-1 rounded-md bg-background border"
+                    className="px-3 py-1 rounded-md bg-background border disabled:opacity-50"
                   >
                     ‹
                   </button>
@@ -95,7 +81,7 @@ export default function Index() {
                     aria-label="next page"
                     onClick={() => { if (hasNext) setPage((p) => p + 1); }}
                     disabled={!hasNext}
-                    className="px-3 py-1 rounded-md bg-background border"
+                    className="px-3 py-1 rounded-md bg-background border disabled:opacity-50"
                   >
                     ›
                   </button>
@@ -106,7 +92,7 @@ export default function Index() {
           </div>
 
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((c) => (
+            {paginatedCampaigns.map((c) => (
               <CampaignCard key={c.id} campaign={c} />
             ))}
           </div>

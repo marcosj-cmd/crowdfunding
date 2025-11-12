@@ -15,6 +15,7 @@ contract Crowdfunding {
         uint funds;
         uint deadline;
         bool withdrawn;
+        string metadataUri;
     }
 
     uint public campaignCount;
@@ -22,7 +23,7 @@ contract Crowdfunding {
         // Mapping para contribuciones por usuario y campaña
         mapping(uint => mapping(address => uint)) public contributions;
 
-    event CampaignCreated(uint id, address owner, uint goal, uint deadline);
+    event CampaignCreated(uint id, address owner, string title, string description, uint goal, uint deadline, string metadataUri);
     event Contribution(uint id, address contributor, uint amount);
     event FundsWithdrawn(uint id, uint amount);
 
@@ -31,7 +32,8 @@ contract Crowdfunding {
         string memory _title,
         string memory _description,
         uint _goal,
-        uint _durationInDays
+        uint _durationInDays,
+        string memory _metadataUri
     ) public {
         require(_goal > 0, "El objetivo debe ser mayor a 0");
 
@@ -44,10 +46,19 @@ contract Crowdfunding {
             goal: _goal,
             funds: 0,
             deadline: block.timestamp + (_durationInDays * 1 days),
-            withdrawn: false
+            withdrawn: false,
+            metadataUri: _metadataUri
         });
 
-        emit CampaignCreated(campaignCount, msg.sender, _goal, block.timestamp + (_durationInDays * 1 days));
+        emit CampaignCreated(
+            campaignCount, 
+            msg.sender, 
+            _title,
+            _description,
+            _goal, 
+            block.timestamp + (_durationInDays * 1 days),
+            _metadataUri
+        );
     }
 
     // Aportar fondos en ETH
@@ -78,7 +89,13 @@ contract Crowdfunding {
         Campaign storage c = campaigns[_id];
         require(msg.sender == c.owner, "No eres el creador");
         require(c.funds >= c.goal, "Objetivo no alcanzado");
-        require(!c.withdrawn, "Fondos ya retirados");
+        require(!c.withdrawn, "Fondos ya retirados");  
+        
+        // Si la campaña sigue activa, permitir retiro anticipado si ya se alcanzó el goal
+        // Si ya expiró, verificar que se haya alcanzado el objetivo
+        if (block.timestamp >= c.deadline) {
+            require(c.funds >= c.goal, "Campana fallida, no se alcanzo el objetivo");
+        }
 
         c.withdrawn = true;
         uint amount = c.funds;
@@ -91,4 +108,4 @@ contract Crowdfunding {
     function isActive(uint _id) public view returns (bool) {
         return block.timestamp < campaigns[_id].deadline;
     }
-}
+
