@@ -23,6 +23,11 @@ const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 // Silenciar "filter not found" ruidoso interno de ethers
 const DEPLOY = Number(process.env.DEPLOY_BLOCK)
 
+// Función para detectar mensajes de "filter not found"
+function hasFilterNotFound(msg) {
+  return typeof msg === 'string' && msg.toLowerCase().includes('filter not found');
+}
+
 // su logger interno
 provider._log = (level, args) => {
   if (Array.isArray(args) && args.some(hasFilterNotFound)) return;
@@ -38,16 +43,21 @@ const iface = new ethers.Interface(ABI);
 
 // Utilidades
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const eventIdOf = (log) => `${log.transactionHash}-${(log.index ?? log.logIndex)}`;
 
 // Función para obtener metadatos de IPFS
 async function fetchMetadataFromIPFS(ipfsUri) {
+  const startTime = Date.now();
   try {
     // Convertir ipfs:// a HTTP gateway
     const httpUrl = ipfsUri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
     
-    const response = await axios.get(httpUrl, { timeout: 10000 });
+    console.log(`⏳ Fetching metadata from: ${httpUrl}`);
+    
+    const response = await axios.get(httpUrl, { timeout: 30000 }); // 30 segundos
     const metadata = response.data;
+    
+    const elapsedTime = Date.now() - startTime;
+    console.log(`✅ Metadata fetched in ${elapsedTime}ms`);
     
     return {
       title: metadata.name || 'Sin título',
@@ -55,7 +65,8 @@ async function fetchMetadataFromIPFS(ipfsUri) {
       image: metadata.image ? metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : ''
     };
   } catch (error) {
-    console.error('Error fetching IPFS metadata:', error.message);
+    const elapsedTime = Date.now() - startTime;
+    console.error(`❌ Error fetching IPFS metadata after ${elapsedTime}ms:`, error.message);
     return { title: 'Error loading metadata', description: '', image: '' };
   }
 }
@@ -74,42 +85,41 @@ export const startListener = async () => {
     }
   };
 
-  // CampaignCreated
-  // ACTUAL: contract.on("CampaignCreated", async (id, owner, goal, deadline, ev) => {
-  // FUTURO: Cuando actualices el contrato, cambia la firma a:
-  // contract.on("CampaignCreated", async (id, owner, title, description, goal, deadline, metadataUri, ev) => {
-  contract.on("CampaignCreated", async (id, owner, goal, deadline, ev) => {
+  // CampaignCreated - Evento actualizado con 7 parámetros
+  contract.on("CampaignCreated", async (id, owner, title, description, goal, deadline, metadataUri, ev) => {
     try {
+      console.log(`🔔 Evento CampaignCreated recibido - ID: ${id}`);
+      
       // Formatear goal y deadline
       const goalEth = ethers.formatEther(goal);
       const deadlineMs = Number(deadline) * 1000;
       const daysLeft = Math.max(0, Math.floor((deadlineMs - Date.now()) / (1000 * 60 * 60 * 24)));
 
-      // Datos básicos del evento (actual)
+      // Datos del evento con todos los parámetros
       const campaignData = {
         id: Number(id),
         owner,
+        title,
+        description,
         goal: goalEth,
         deadline: deadlineMs,
         daysLeft: daysLeft,
         funds: "0.0",
         withdrawn: false,
+        metadataUri,
       };
 
-      // DESCOMENTAR cuando actualices el contrato para incluir metadataUri:
-      // campaignData.title = title;
-      // campaignData.description = description;
-      // campaignData.metadataUri = metadataUri;
-      // 
-      // if (metadataUri && metadataUri.startsWith('ipfs://')) {
-      //   try {
-      //     const metadata = await fetchMetadataFromIPFS(metadataUri);
-      //     campaignData.image = metadata.image;
-      //   } catch (err) {
-      //     console.error('Error parsing IPFS metadata:', err);
-      //   }
-      // }
+      // Si hay metadataUri, obtener la imagen de IPFS
+      if (metadataUri && metadataUri.startsWith('ipfs://')) {
+        try {
+          const metadata = await fetchMetadataFromIPFS(metadataUri);
+          campaignData.image = metadata.image;
+        } catch (err) {
+          console.error('Error parsing IPFS metadata:', err);
+        }
+      }
 
+      console.log(`💾 Guardando campaña ${id} en MongoDB...`);
       await Campaign.updateOne(
         { id: Number(id) },
         campaignData,
@@ -126,10 +136,6 @@ export const startListener = async () => {
   // Contribution
   contract.on("Contribution", async (id, contributor, amount, ev) => {
     try {
-      const log = ev?.log ?? ev;
-      const evId = eventIdOf(log);
-      if (await ProcessedEvent.findById(evId)) return;
-
       const campaign = await Campaign.findOne({ id: Number(id) });
       if (campaign) {
         // funds y amount ya están en ETH string decimal
@@ -151,7 +157,6 @@ export const startListener = async () => {
         console.warn(`⚠️ Campaña ${id} no encontrada en la base de datos`);
       }
 
-      await ProcessedEvent.create({ _id: evId });
       await handleBlockPersist(ev);
       console.log(`💰 Contribución: campaña ${id}, ${amount} wei, de ${contributor}`);
     } catch (err) {
@@ -162,10 +167,6 @@ export const startListener = async () => {
   // FundsWithdrawn
   contract.on("FundsWithdrawn", async (id, amount, ev) => {
     try {
-      const log = ev?.log ?? ev;
-      const evId = eventIdOf(log);
-      if (await ProcessedEvent.findById(evId)) return;
-
       const campaign = await Campaign.findOne({ id: Number(id) });
       if (campaign) {
         campaign.funds = "0.0";
@@ -173,7 +174,6 @@ export const startListener = async () => {
         await campaign.save();
       }
 
-      await ProcessedEvent.create({ _id: evId });
       await handleBlockPersist(ev);
       console.log(`🏦 Retiro: campaña ${id}, ${amount} wei`);
     } catch (err) {
@@ -219,9 +219,6 @@ export async function syncPastEvents() {
       });
 
       for (const log of logs) {
-        const evId = eventIdOf(log);
-        if (await ProcessedEvent.findById(evId)) continue;
-
         let parsed;
         try {
           parsed = iface.parseLog(log); // decodifica por ABI
@@ -232,21 +229,42 @@ export async function syncPastEvents() {
         const { name, args } = parsed;
 
         if (name === "CampaignCreated") {
-          const [id, owner, goal, deadline] = args;
+          const [id, owner, title, description, goal, deadline, metadataUri] = args;
+          
           const goalEth = ethers.formatEther(goal);
           const deadlineMs = Number(deadline) * 1000;
+          const daysLeft = Math.max(0, Math.floor((deadlineMs - Date.now()) / (1000 * 60 * 60 * 24)));
+          
+          const campaignData = {
+            id: Number(id),
+            owner,
+            title,
+            description,
+            goal: goalEth,
+            deadline: deadlineMs,
+            daysLeft,
+            funds: "0.0",
+            withdrawn: false,
+            metadataUri,
+          };
+
+          // Si hay metadataUri, obtener la imagen de IPFS
+          if (metadataUri && metadataUri.startsWith('ipfs://')) {
+            try {
+              const metadata = await fetchMetadataFromIPFS(metadataUri);
+              campaignData.image = metadata.image;
+            } catch (err) {
+              console.error('Error parsing IPFS metadata:', err);
+            }
+          }
+
           await Campaign.updateOne(
             { id: Number(id) },
-            {
-              id: Number(id),
-              owner,
-              goal: goalEth,
-              deadline: deadlineMs,
-              funds: "0.0",
-              withdrawn: false,
-            },
+            campaignData,
             { upsert: true }
           );
+          
+          console.log(`📢 Nueva campaña creada: ID ${id}, owner ${owner}`);
         } else if (name === "Contribution") {
           const [id, contributor, amount] = args;
           const campaign = await Campaign.findOne({ id: Number(id) });
@@ -274,8 +292,6 @@ export async function syncPastEvents() {
             await campaign.save();
           }
         }
-
-        await ProcessedEvent.create({ _id: evId });
       }
 
       // Guardar avance SIEMPRE, haya o no eventos

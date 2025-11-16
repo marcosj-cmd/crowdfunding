@@ -1,5 +1,6 @@
 import express from "express";
 import Campaign from "../models/Campaign.js";
+import { paginate } from "../utils/pagination.js";
 
 const router = express.Router();
 
@@ -8,16 +9,12 @@ router.get("/", async (req, res) => {
   res.json(campaigns);
 });
 
-// GET /api/campaigns/paginated?page=1&limit=10&sort=desc&owner=0x...&withdrawn=true
+// GET /api/campaigns/paginated?page=1&limit=10&owner=0x...&withdrawn=true
 router.get("/paginated", async (req, res) => {
   try {
-  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 100);
-
-
+    // Construir filtros
     const query = {};
     if (req.query.owner) {
-      // Búsqueda case-insensitive para direcciones Ethereum
       query.owner = new RegExp(`^${req.query.owner}$`, 'i');
     }
     if (typeof req.query.withdrawn !== "undefined") {
@@ -25,25 +22,10 @@ router.get("/paginated", async (req, res) => {
       if (req.query.withdrawn === "false") query.withdrawn = false;
     }
 
-    const total = await Campaign.countDocuments(query);
-    const totalPages = Math.max(Math.ceil(total / limit), 1);
-    const safePage = Math.min(page, totalPages);
-    const skip = (safePage - 1) * limit;
+    // Usar helper de paginación
+    const result = await paginate(req, Campaign, query);
 
-    const items = await Campaign.find(query)
-      .skip(skip)
-      .limit(limit)
-      .lean();
-
-    res.json({
-      page: safePage,
-      limit,
-      total,
-      totalPages,
-      hasPrev: safePage > 1,
-      hasNext: safePage < totalPages,
-      items,
-    });
+    res.json(result);
   } catch (err) {
     console.error("Error paginación de campañas:", err);
     res.status(500).json({ error: "Error interno del servidor" });

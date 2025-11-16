@@ -109,3 +109,4 @@ contract Crowdfunding {
         return block.timestamp < campaigns[_id].deadline;
     }
 
+}

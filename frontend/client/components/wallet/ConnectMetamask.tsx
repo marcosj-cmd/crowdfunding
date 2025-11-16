@@ -8,6 +8,10 @@ function truncateAddress(address: string) {
 export default function ConnectMetamask() {
   const [account, setAccount] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [chainId, setChainId] = useState<string | null>(null);
+  
+  const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 en hexadecimal
+  const isWrongNetwork = chainId && chainId !== SEPOLIA_CHAIN_ID;
 
   useEffect(() => {
     const eth = (window as any).ethereum;
@@ -17,6 +21,11 @@ export default function ConnectMetamask() {
     eth.request({ method: "eth_accounts" }).then((accounts: string[]) => {
       if (accounts && accounts.length) setAccount(accounts[0]);
     }).catch(() => {});
+    
+    // load initial chain
+    eth.request({ method: "eth_chainId" }).then((chain: string) => {
+      setChainId(chain);
+    }).catch(() => {});
 
     const handleAccounts = (accounts: string[]) => {
       if (!accounts || accounts.length === 0) {
@@ -25,11 +34,19 @@ export default function ConnectMetamask() {
         setAccount(accounts[0]);
       }
     };
+    
+    const handleChainChanged = (chain: string) => {
+      setChainId(chain);
+      // Reload page cuando cambia la red (recomendación de MetaMask)
+      window.location.reload();
+    };
 
     eth.on && eth.on("accountsChanged", handleAccounts);
+    eth.on && eth.on("chainChanged", handleChainChanged);
 
     return () => {
       eth.removeListener && eth.removeListener("accountsChanged", handleAccounts);
+      eth.removeListener && eth.removeListener("chainChanged", handleChainChanged);
     };
   }, []);
 
@@ -44,6 +61,10 @@ export default function ConnectMetamask() {
       if (typeof eth.request === "function") {
         const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
         if (accounts && accounts.length) setAccount(accounts[0]);
+        
+        // Obtener la red actual
+        const chain = await eth.request({ method: "eth_chainId" });
+        setChainId(chain);
       } else if (typeof eth.enable === "function") {
         // legacy provider
         const accounts = (await eth.enable()) as string[];
@@ -100,14 +121,62 @@ export default function ConnectMetamask() {
 
     window.alert("Disconnected from app. To fully remove permissions, disconnect the site from your MetaMask account in the wallet UI.");
   };
+  
+  const switchToSepolia = async () => {
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+    
+    try {
+      await eth.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+    } catch (switchError: any) {
+      // Si Sepolia no está agregada, agregarla
+      if (switchError.code === 4902) {
+        try {
+          await eth.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: SEPOLIA_CHAIN_ID,
+              chainName: "Sepolia Testnet",
+              nativeCurrency: {
+                name: "Sepolia ETH",
+                symbol: "ETH",
+                decimals: 18
+              },
+              rpcUrls: ["https://rpc.sepolia.org"],
+              blockExplorerUrls: ["https://sepolia.etherscan.io"]
+            }],
+          });
+        } catch (addError) {
+          console.error("Error adding Sepolia:", addError);
+        }
+      }
+    }
+  };
 
   return (
     <div className="flex items-center gap-2">
       {account ? (
         <>
-          <Button className="flex items-center gap-2 px-3 py-2 bg-foreground text-background" onClick={() => navigator.clipboard?.writeText(account)}>
-            <span className="text-sm font-medium">{truncateAddress(account)}</span>
-          </Button>
+          {isWrongNetwork ? (
+            <Button 
+              className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white hover:bg-red-700"
+              onClick={switchToSepolia}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span className="text-sm font-medium">Wrong Network - Switch to Sepolia</span>
+            </Button>
+          ) : (
+            <Button className="flex items-center gap-2 px-3 py-2 bg-foreground text-background" onClick={() => navigator.clipboard?.writeText(account)}>
+              <span className="text-sm font-medium">{truncateAddress(account)}</span>
+            </Button>
+          )}
           <Button className="h-10 w-10 p-2 rounded-md flex items-center justify-center bg-red-600 text-white" aria-label="Disconnect MetaMask" onClick={disconnect}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

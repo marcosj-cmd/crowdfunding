@@ -26,16 +26,16 @@ export async function createCampaign(params: CreateCampaignParams): Promise<ethe
     description,
     goal: goalInWei.toString(),
     days: daysNum,
-    // metadataUri // Comentado hasta que actualices el contrato
+    metadataUri
   });
 
-  // Llamar al contrato SIN metadataUri (tu contrato actual no lo soporta)
+  // Llamar al contrato con metadataUri
   const tx = await contract.createCampaign(
     title,
     description,
     goalInWei,
-    daysNum
-    // metadataUri // TODO: Descomentar cuando actualices el contrato y ABI
+    daysNum,
+    metadataUri
   );
 
   console.log("Transaction sent:", tx.hash);
