@@ -35,13 +35,22 @@ app.get("*", (req, res, next) => {
 });
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
+  .then(() => {
     console.log("✅ Conectado a MongoDB");
-    await syncPastEvents();  // primero recorre lo viejo (hasta head)
-    await startListener();   // luego escucha lo nuevo
+    
+    // Iniciar servidor PRIMERO
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () =>
-      console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT} (sirviendo estáticos desde ${distDir})`)
-    );
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT} (sirviendo estáticos desde ${distDir})`);
+      console.log(`🌐 API disponible en http://localhost:${PORT}/api`);
+      
+      // DESPUÉS iniciar sync y listener en background
+      console.log('🔄 Iniciando sincronización de eventos blockchain...');
+      syncPastEvents()
+        .then(() => startListener())
+        .catch(err => {
+          console.error('❌ Error en listener:', err);
+        });
+    });
   })
   .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
