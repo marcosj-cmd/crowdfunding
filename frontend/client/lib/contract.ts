@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import CrowdfundingABI from "../../../abis/Crowdfunding.json";
 
 // Configuración del contrato
-export const CONTRACT_ADDRESS = import.meta.env.CONTRACT_ADDRESS;
+export const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 export const ABI = CrowdfundingABI;
 
