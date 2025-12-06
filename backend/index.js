@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import campaignsRoute from "./routes/campaigns.js";
 import contributionsRouter from "./routes/contributions.js";
-import { startListener, syncPastEvents } from "./listener.js";
+import { startListener, syncPastEvents } from "./services/BlockchainService.js";
 dotenv.config();
 
 

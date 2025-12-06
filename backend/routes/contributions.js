@@ -43,7 +43,7 @@ router.get("/contributions/paginated", async (req, res) => {
   } catch (err) {
     console.error("Error paginación de contribuciones:", err);
     res.status(500).json({ error: "Error interno del servidor" });
-  }
+  }   
 });
 
 export default router;

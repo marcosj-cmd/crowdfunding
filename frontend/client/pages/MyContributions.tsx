@@ -1,81 +1,97 @@
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-
-type Contribution = {
-  campaignId: string;
-  campaignTitle: string;
-  amount: number;
-  date: string;
-};
+import { getContributionsByOwner, type Contribution } from "@/api/backend";
+import { getConnectedAccount, onAccountsChanged } from "@/lib/contract";
 
 export default function MyContributions() {
   const [account, setAccount] = useState<string | null>(null);
   const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  // Conectar cuenta de MetaMask usando funciones utilitarias
   useEffect(() => {
-    const eth = (window as any).ethereum;
-    if (!eth) return;
-    eth.request({ method: "eth_accounts" }).then((accounts: string[]) => {
-      if (accounts && accounts.length) setAccount(accounts[0]);
-    });
-    eth.on && eth.on("accountsChanged", (accounts: string[]) => {
-      setAccount(accounts && accounts.length ? accounts[0] : null);
-    });
-    return () => {
-      eth.removeListener && eth.removeListener("accountsChanged", () => {});
-    };
+    // Obtener cuenta inicial
+    getConnectedAccount().then(setAccount);
+
+    // Escuchar cambios de cuenta
+    const cleanup = onAccountsChanged(setAccount);
+
+    return cleanup;
   }, []);
 
+  // Cargar contribuciones cuando cambia la cuenta
   useEffect(() => {
     if (!account) {
       setContributions([]);
       return;
     }
-    axios
-      .get(`/api/contributions?owner=${account}`)
-      .then(res => {
-        const data = res.data;
-        setContributions(Array.isArray(data) ? data : []);
+
+    setLoading(true);
+    getContributionsByOwner(account)
+      .then(setContributions)
+      .catch(err => {
+        console.error("Error cargando contribuciones:", err);
+        setContributions([]);
       })
-      .catch(() => setContributions([]));
+      .finally(() => setLoading(false));
   }, [account]);
+
+  // Renderizar estado vacío
+  const renderEmptyState = () => {
+    const message = !account 
+      ? "Conecta tu wallet para ver tus aportes."
+      : loading
+      ? "Cargando contribuciones..."
+      : "No tienes aportes registrados.";
+
+    return (
+      <div className="p-6 rounded-lg border bg-card text-card-foreground">
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    );
+  };
 
   return (
     <div className="container py-12">
       <h1 className="text-2xl font-bold mb-8">Mis aportes</h1>
-      {(!account || contributions.length === 0) ? (
-        <div className="p-6 rounded-lg border bg-card text-card-foreground">
-          <p className="text-sm">{!account ? "Conecta tu wallet para ver tus aportes." : "No tienes aportes registrados."}</p>
-        </div>
+      
+      {!account || loading || contributions.length === 0 ? (
+        renderEmptyState()
       ) : (
-        <div>
-          <div className="rounded-lg border bg-card p-4 max-h-[60vh] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Date</TableHead>
+        <div className="rounded-lg border bg-card p-4 max-h-[60vh] overflow-y-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campaña</TableHead>
+                <TableHead>Monto</TableHead>
+                <TableHead>Fecha</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {contributions.map((contribution, idx) => (
+                <TableRow key={idx}>
+                  <TableCell>
+                    <div className="font-medium">
+                      {contribution.campaignTitle || `Campaña #${contribution.campaignId}`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ID: {contribution.campaignId}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono">
+                    {contribution.amount.toFixed(4)} ETH
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(contribution.date).toLocaleString()}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contributions.map((c, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell>
-                      <div className="font-medium">{c.owner}</div>
-                      <div className="text-xs text-muted-foreground">Campaign ID: {c.campaignId}</div>
-                    </TableCell>
-                    <TableCell>{c.amount.toFixed(3)} ETH</TableCell>
-                    <TableCell>{new Date(c.date).toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
   );
 }
+  

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { contributeToCampaign } from "@/api/blockchain";
+import { getCampaignById } from "@/api/backend";
 
 
 
@@ -14,15 +16,29 @@ export default function CampaignDetails() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/campaigns/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to fetch campaign");
-        return res.json();
-      })
-      .then(data => setCampaign(data))
+    getCampaignById(Number(id))
+      .then(setCampaign)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Handler para contribuir
+  const handleContribute = async () => {
+    if (!id || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      window.alert("Ingresa un monto válido en ETH");
+      return;
+    }
+    try {
+      // Deshabilitar el botón mientras se procesa
+      setLoading(true);
+      await contributeToCampaign(Number(id), amount);
+      window.alert("¡Contribución enviada correctamente!");
+    } catch (err) {
+      window.alert("Error al contribuir: " + (err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) return <div className="container py-12">Loading...</div>;
   if (error) return <div className="container py-12 text-red-600">{error}</div>;
@@ -54,9 +70,14 @@ export default function CampaignDetails() {
           placeholder="Amount in ETH"
           value={amount}
           onChange={e => setAmount(e.target.value)}
+          disabled={loading}
         />
-        <button className="bg-foreground text-background px-4 py-2 rounded">
-          Back this project
+        <button
+          className="bg-foreground text-background px-4 py-2 rounded"
+          onClick={handleContribute}
+          disabled={loading}
+        >
+          {loading ? "Enviando..." : "Back this project"}
         </button>
       </div>
     </div>
