@@ -1,8 +1,9 @@
 /**
- *Submitted for verification at Etherscan.io on 2025-10-04
+ *Submitted for verification at Etherscan.io on 2025-11-14
 */
 
 // SPDX-License-Identifier: MIT
+//marcos crowdfunding TFG
 pragma solidity ^0.8.17;
 
 contract Crowdfunding {
@@ -76,10 +77,10 @@ contract Crowdfunding {
     // Permitir refund si la campaña no alcanzó el objetivo tras el deadline
     function refund(uint campaignId) external {
         Campaign storage c = campaigns[campaignId];
-        require(block.timestamp > c.deadline, "Campaign still active");
-        require(c.funds < c.goal, "Goal reached, cannot refund");
+        require(block.timestamp > c.deadline, "Campana activa");
+        require(c.funds < c.goal, "Objetivo cumplido, no refund");
         uint amount = contributions[campaignId][msg.sender];
-        require(amount > 0, "No contribution to refund");
+        require(amount > 0, "No hay contribuciones para reembolsar");
         contributions[campaignId][msg.sender] = 0;
         payable(msg.sender).transfer(amount);
     }
