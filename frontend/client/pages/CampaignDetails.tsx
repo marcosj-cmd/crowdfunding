@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { contributeToCampaign, refundContribution } from "@/api/blockchain";
-import { getCampaignById } from "@/api/backend";
+import { getCampaignById, getContributionsByOwner } from "@/api/backend";
 import { getConnectedAccount } from "@/lib/contract";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,7 @@ export default function CampaignDetails() {
   const [amount, setAmount] = useState("");
   const [account, setAccount] = useState<string | null>(null);
   const [refundLoading, setRefundLoading] = useState(false);
+  const [userContribution, setUserContribution] = useState<number>(0);
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -26,6 +27,20 @@ export default function CampaignDetails() {
       .finally(() => setLoading(false));
     getConnectedAccount().then(setAccount);
   }, [id]);
+
+  // Consultar la contribución del usuario para esta campaña
+  useEffect(() => {
+    if (!account || !id) {
+      setUserContribution(0);
+      return;
+    }
+    getContributionsByOwner(account)
+      .then(contributions => {
+        const contrib = contributions.find(c => String(c.campaignId) === String(id));
+        setUserContribution(contrib ? contrib.amount : 0);
+      })
+      .catch(() => setUserContribution(0));
+  }, [account, id]);
   // Handler para refund
   const handleRefund = async () => {
     if (!id) return;
@@ -102,17 +117,39 @@ export default function CampaignDetails() {
         >
           {loading ? "Enviando..." : "Back this project"}
         </button>
-        {/* Botón Refund */}
+        {/* Botón Refund: siempre visible, desactivado si la campaña está activa o el usuario no ha contribuido */}
         {(() => {
           if (!campaign || !account) return null;
-          const canRefund = Date.now() > campaign.deadline && Number(campaign.funds) < Number(campaign.goal);
+          const isCampaignFailed = Date.now() > campaign.deadline && Number(campaign.funds) < Number(campaign.goal);
+          const isCampaignActive = Date.now() <= campaign.deadline;
+          const hasContributed = userContribution > 0;
+          let disabled = true;
+          let buttonText = "Refund";
+          let title = undefined;
+
+          if (isCampaignActive) {
+            buttonText = "Refund (campaña activa)";
+            title = "La campaña sigue activa, no puedes pedir reembolso aún.";
+          } else if (!hasContributed) {
+            buttonText = "Refund (no has aportado)";
+            title = "Debes haber contribuido para solicitar reembolso.";
+          } else if (isCampaignFailed) {
+            disabled = refundLoading;
+            buttonText = refundLoading ? "Solicitando..." : "Refund";
+          } else {
+            // Campaña expirada pero objetivo cumplido
+            buttonText = "Refund (objetivo cumplido)";
+            title = "La campaña alcanzó el objetivo, no hay reembolso.";
+          }
+
           return (
             <Button
               className="bg-red-600 text-white ml-2"
-              disabled={!canRefund || refundLoading}
+              disabled={disabled}
               onClick={handleRefund}
+              title={title}
             >
-              {refundLoading ? "Solicitando..." : "Refund"}
+              {buttonText}
             </Button>
           );
         })()}
