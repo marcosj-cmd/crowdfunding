@@ -89,8 +89,15 @@ export default function CampaignDetails() {
           <img
             src={campaign.image}
             alt={campaign.title}
-            className="max-w-xs max-h-56 rounded-md object-cover border"
-            style={{ display: "block", marginTop: 16, marginBottom: 16 }}
+            className="rounded-md object-cover border"
+            style={{
+              display: "block",
+              marginTop: 16,
+              marginBottom: 16,
+              width: 320,
+              height: 224,
+              objectFit: "cover"
+            }}
           />
         )}
       </div>
