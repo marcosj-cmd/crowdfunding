@@ -73,9 +73,9 @@ export default function CampaignDetails() {
     }
   };
 
-  if (loading) return <div className="container py-12">Loading...</div>;
+  if (loading) return <div className="container py-12">Cargando...</div>;
   if (error) return <div className="container py-12 text-red-600">{error}</div>;
-  if (!campaign) return <div className="container py-12">Campaign not found.</div>;
+  if (!campaign) return <div className="container py-12">Campaña no encontrada.</div>;
  
   return (
     <div className="container py-12">
@@ -103,7 +103,7 @@ export default function CampaignDetails() {
       </div>
       {campaign.createdAt && (
         <div className="mt-4 text-sm text-muted-foreground">
-          Created: {new Date(campaign.createdAt).toLocaleString()}
+          Creado: {new Date(campaign.createdAt).toLocaleString()}
         </div>
       )}
       <div className="mt-8 flex gap-2 items-center">
@@ -135,17 +135,17 @@ export default function CampaignDetails() {
           let title = undefined;
 
           if (isCampaignActive) {
-            buttonText = "Refund (campaña activa)";
+            buttonText = "Reembolso (campaña activa)";
             title = "La campaña sigue activa, no puedes pedir reembolso aún.";
           } else if (!hasContributed) {
-            buttonText = "Refund (no has aportado)";
+            buttonText = "Reembolso (no has aportado)";
             title = "Debes haber contribuido para solicitar reembolso.";
           } else if (isCampaignFailed) {
             disabled = refundLoading;
-            buttonText = refundLoading ? "Solicitando..." : "Refund";
+            buttonText = refundLoading ? "Solicitando..." : "Reembolso";
           } else {
             // Campaña expirada pero objetivo cumplido
-            buttonText = "Refund (objetivo cumplido)";
+            buttonText = "Reembolso (objetivo cumplido)";
             title = "La campaña alcanzó el objetivo, no hay reembolso.";
           }
 
