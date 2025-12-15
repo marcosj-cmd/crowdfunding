@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { contributeToCampaign } from "@/api/blockchain";
+import { contributeToCampaign, refundContribution } from "@/api/blockchain";
 import { getCampaignById } from "@/api/backend";
+import { getConnectedAccount } from "@/lib/contract";
+import { Button } from "@/components/ui/button";
 
 
 
 export default function CampaignDetails() {
   const { id } = useParams<{ id: string }>();
-  const [campaign, setCampaign] = useState(null);
+  const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
- const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState("");
+  const [account, setAccount] = useState<string | null>(null);
+  const [refundLoading, setRefundLoading] = useState(false);
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -20,7 +24,21 @@ export default function CampaignDetails() {
       .then(setCampaign)
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
+    getConnectedAccount().then(setAccount);
   }, [id]);
+  // Handler para refund
+  const handleRefund = async () => {
+    if (!id) return;
+    try {
+      setRefundLoading(true);
+      await refundContribution(Number(id));
+      window.alert("Reembolso solicitado correctamente");
+    } catch (err) {
+      window.alert("Error al solicitar refund: " + (err?.message || err));
+    } finally {
+      setRefundLoading(false);
+    }
+  };
 
   // Handler para contribuir
   const handleContribute = async () => {
@@ -53,7 +71,12 @@ export default function CampaignDetails() {
       <div className="mt-6 prose max-w-none">
         <p>{campaign.description}</p>
         {campaign.image && (
-          <img src={campaign.image} alt={campaign.title} className="h-full w-full object-cover" />
+          <img
+            src={campaign.image}
+            alt={campaign.title}
+            className="max-w-xs max-h-56 rounded-md object-cover border"
+            style={{ display: "block", marginTop: 16, marginBottom: 16 }}
+          />
         )}
       </div>
       {campaign.createdAt && (
@@ -79,6 +102,20 @@ export default function CampaignDetails() {
         >
           {loading ? "Enviando..." : "Back this project"}
         </button>
+        {/* Botón Refund */}
+        {(() => {
+          if (!campaign || !account) return null;
+          const canRefund = Date.now() > campaign.deadline && Number(campaign.funds) < Number(campaign.goal);
+          return (
+            <Button
+              className="bg-red-600 text-white ml-2"
+              disabled={!canRefund || refundLoading}
+              onClick={handleRefund}
+            >
+              {refundLoading ? "Solicitando..." : "Refund"}
+            </Button>
+          );
+        })()}
       </div>
     </div>
   );

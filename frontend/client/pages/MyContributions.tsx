@@ -1,6 +1,8 @@
 
 import { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { getContributionsByOwner, type Contribution } from "@/api/backend";
 import { getConnectedAccount, onAccountsChanged } from "@/lib/contract";
 
@@ -66,6 +68,7 @@ export default function MyContributions() {
                 <TableHead>Campaña</TableHead>
                 <TableHead>Monto</TableHead>
                 <TableHead>Fecha</TableHead>
+                 <TableHead>Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -84,6 +87,11 @@ export default function MyContributions() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(contribution.date).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <Link to={`/campaigns/${contribution.campaignId}`}>
+                      <Button className="bg-green-600 text-white">Ver campaña</Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}
