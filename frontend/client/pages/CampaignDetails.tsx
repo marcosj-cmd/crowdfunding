@@ -28,7 +28,7 @@ export default function CampaignDetails() {
     getConnectedAccount().then(setAccount);
   }, [id]);
 
-  // Consultar la contribución del usuario para esta campaña
+  // Consultar la contribución del usuario para esta campaña (suma todas las contribuciones)
   useEffect(() => {
     if (!account || !id) {
       setUserContribution(0);
@@ -36,8 +36,10 @@ export default function CampaignDetails() {
     }
     getContributionsByOwner(account)
       .then(contributions => {
-        const contrib = contributions.find(c => String(c.campaignId) === String(id));
-        setUserContribution(contrib ? contrib.amount : 0);
+        // Filtrar contribuciones de esta campaña y sumar el total
+        const campaignContributions = contributions.filter(c => String(c.campaignId) === String(id));
+        const totalAmount = campaignContributions.reduce((sum, c) => sum + c.amount, 0);
+        setUserContribution(totalAmount);
       })
       .catch(() => setUserContribution(0));
   }, [account, id]);
@@ -104,6 +106,13 @@ export default function CampaignDetails() {
       {campaign.createdAt && (
         <div className="mt-4 text-sm text-muted-foreground">
           Creado: {new Date(campaign.createdAt).toLocaleString()}
+        </div>
+      )}
+      {userContribution > 0 && (
+        <div className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            Has aportado: <span className="font-mono font-bold">{userContribution.toFixed(4)} ETH</span> a esta campaña
+          </p>
         </div>
       )}
       <div className="mt-8 flex gap-2 items-center">
