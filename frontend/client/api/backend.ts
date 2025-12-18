@@ -7,8 +7,8 @@ export interface Campaign {
   owner: string;
   title: string;
   description: string;
-  goal: string;
-  funds: string;
+  goal: number;
+  funds: number;
   deadline: number;
   daysLeft: number;
   withdrawn: boolean;

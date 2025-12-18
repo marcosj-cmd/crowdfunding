@@ -1,21 +1,16 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { ethers } from "ethers";
 import type { Campaign } from "@/api/backend";
 
  export default function CampaignCard({ campaign }: { campaign: Campaign }) {
   // Convertir strings a números
   const goal = typeof campaign.goal === 'string' ? parseFloat(campaign.goal) : campaign.goal;
   const funds = typeof campaign.funds === 'string' ? parseFloat(campaign.funds) : campaign.funds;
-  
-  const [raised, setRaised] = useState<number>(funds || 0);
 
-  // Calcular daysLeft y fecha a partir de deadline
+  // Calcular daysLeft a partir de deadline
   const daysLeft = Math.max(0, Math.floor((Number(campaign.deadline) - Date.now()) / (1000 * 60 * 60 * 24)));
-  const fecha = new Date(Number(campaign.deadline) * 1000);
 
   const pct = goal > 0 ? Math.min(100, Math.round((funds / goal) * 100)) : 0;
 
