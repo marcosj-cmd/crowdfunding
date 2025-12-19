@@ -7,7 +7,11 @@ import { fileURLToPath } from "url";
 import campaignsRoute from "./routes/campaigns.js";
 import contributionsRouter from "./routes/contributions.js";
 import { startListener } from "./services/BlockchainService.js";
-dotenv.config();
+
+// Cargar .env desde la raíz del proyecto (funciona en local y Heroku)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 
 const app = express();
@@ -17,8 +21,6 @@ app.use("/api/campaigns", campaignsRoute);
 app.use("/api", contributionsRouter);
 
 // Static frontend serving from frontend/dist
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const distDir = path.resolve(__dirname, "../frontend/dist");
 
 app.use(express.static(distDir));
