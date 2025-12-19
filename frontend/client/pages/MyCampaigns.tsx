@@ -80,8 +80,10 @@ export default function MyCampaigns() {
                   {campaigns.map((c) => {
                     const daysLeft = Math.max(0, Math.floor((Number(c.deadline) - Date.now()) / (1000 * 60 * 60 * 24)));
                     const fecha = new Date(Number(c.deadline));
-                    // Permitir withdraw apenas se alcance el goal
-                    const canWithdraw = Number(c.funds) >= Number(c.goal);
+                    // Permitir withdraw apenas se alcance el goal y no se haya retirado ya
+                    const goalReached = Number(c.funds) >= Number(c.goal);
+                    const alreadyWithdrawn = c.withdrawn === true;
+                    const canWithdraw = goalReached && !alreadyWithdrawn;
                     return (
                       <TableRow key={c.id}>
                         <TableCell className="flex items-center gap-3">
@@ -102,10 +104,13 @@ export default function MyCampaigns() {
                             disabled={!canWithdraw}
                             onClick={() => handleWithdraw(c.id)}
                           >
-                            Withdraw
+                            {alreadyWithdrawn ? "Retirado" : "Withdraw"}
                           </Button>
-                          {!canWithdraw && (
+                          {!goalReached && !alreadyWithdrawn && (
                             <div className="text-xs text-muted-foreground mt-1">No se alcanzó el goal</div>
+                          )}
+                          {alreadyWithdrawn && (
+                            <div className="text-xs text-muted-foreground mt-1">Fondos ya retirados</div>
                           )}
                         </TableCell>
                       </TableRow>
