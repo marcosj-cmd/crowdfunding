@@ -4,6 +4,7 @@ import { contributeToCampaign, refundContribution } from "@/api/blockchain";
 import { getCampaignById, getContributionsByOwner } from "@/api/backend";
 import { getConnectedAccount } from "@/lib/contract";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 
 
@@ -49,9 +50,9 @@ export default function CampaignDetails() {
     try {
       setRefundLoading(true);
       await refundContribution(Number(id));
-      window.alert("Reembolso solicitado correctamente");
+      toast.success("Reembolso solicitado correctamente");
     } catch (err) {
-      window.alert("Error al solicitar refund: " + (err?.message || err));
+      toast.error("Error al solicitar refund: " + (err?.message || err));
     } finally {
       setRefundLoading(false);
     }
@@ -60,16 +61,16 @@ export default function CampaignDetails() {
   // Handler para contribuir
   const handleContribute = async () => {
     if (!id || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      window.alert("Ingresa un monto válido en ETH");
+      toast.warning("Ingresa un monto válido en ETH");
       return;
     }
     try {
       // Deshabilitar el botón mientras se procesa
       setLoading(true);
       await contributeToCampaign(Number(id), amount);
-      window.alert("¡Contribución enviada correctamente!");
+      toast.success("¡Contribución enviada correctamente!");
     } catch (err) {
-      window.alert("Error al contribuir: " + (err?.message || err));
+      toast.error("Error al contribuir: " + (err?.message || err));
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/useWallet";
 import { uploadCampaignToIPFS } from "@/api/ipfs";
 import { createCampaign } from "@/api/blockchain";
+import { toast } from "sonner";
 
 export default function Create() {
   const { account, connectWallet, isConnecting } = useWallet();
@@ -47,7 +48,7 @@ export default function Create() {
 
     try {
       // 1. Subir imagen a IPFS
-      alert("Uploading image to IPFS...");
+      toast.info("Uploading image to IPFS...");
       const { uploadImageToIPFS, uploadMetadataToIPFS } = await import("@/api/ipfs");
       const imageIpfsUri = await uploadImageToIPFS(imageFile!);
       
@@ -59,11 +60,11 @@ export default function Create() {
       };
       
       // 3. Subir metadata a IPFS
-      alert("Uploading metadata to IPFS...");
+      toast.info("Uploading metadata to IPFS...");
       const metadataUri = await uploadMetadataToIPFS(metadata);
       
       // 4. Crear campaña en blockchain (MetaMask valida la red automáticamente)
-      alert("Creating campaign on blockchain... Please confirm in MetaMask!");
+      toast.info("Creating campaign on blockchain... Please confirm in MetaMask!");
       const tx = await createCampaign({
         title,
         description,
@@ -72,10 +73,10 @@ export default function Create() {
         metadataUri
       });
       
-      alert("Transaction sent! Waiting for confirmation...");
+      toast.info("Transaction sent! Waiting for confirmation...");
       await tx.wait();
       
-      alert(`✅ Campaign created successfully!\nIPFS: ${metadataUri}`);
+      toast.success(`Campaign created successfully!`);
       
       // Limpiar formulario
       setTitle("");
@@ -87,7 +88,7 @@ export default function Create() {
     } catch (err: any) {
       console.error("Error creating campaign:", err);
       const errorMessage = err?.message || err?.toString() || "Unknown error";
-      alert("❌ Error: " + errorMessage);
+      toast.error("Error: " + errorMessage);
       setError(errorMessage);
     } finally {
       setCreating(false);

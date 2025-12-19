@@ -24,26 +24,4 @@ router.get("/contributions", async (req, res) => {
   }
 });
 
-// GET /api/contributions/paginated?page=1&limit=10&owner=0x...
-router.get("/contributions/paginated", async (req, res) => {
-  try {
-    // Construir filtros
-    const query = {};
-    if (req.query.owner) {
-      query.owner = new RegExp(`^${req.query.owner}$`, 'i');
-    }
-    if (req.query.campaignId) {
-      query.campaignId = parseInt(req.query.campaignId, 10);
-    }
-
-    // Usar helper de paginación
-    const result = await paginate(req, Contribution, query);
-
-    res.json(result);
-  } catch (err) {
-    console.error("Error paginación de contribuciones:", err);
-    res.status(500).json({ error: "Error interno del servidor" });
-  }   
-});
-
 export default router;

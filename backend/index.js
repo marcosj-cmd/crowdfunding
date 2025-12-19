@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import campaignsRoute from "./routes/campaigns.js";
 import contributionsRouter from "./routes/contributions.js";
-import { startListener, syncPastEvents } from "./services/BlockchainService.js";
+import { startListener } from "./services/BlockchainService.js";
 dotenv.config();
 
 
@@ -44,10 +44,9 @@ mongoose.connect(process.env.MONGO_URI)
       console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT} (sirviendo estáticos desde ${distDir})`);
       console.log(`🌐 API disponible en http://localhost:${PORT}/api`);
       
-      // DESPUÉS iniciar sync y listener en background
-      console.log('🔄 Iniciando sincronización de eventos blockchain...');
-      syncPastEvents()
-        .then(() => startListener())
+      // Iniciar listener de eventos blockchain
+      console.log('🔄 Iniciando listener de eventos blockchain...');
+      startListener()
         .catch(err => {
           console.error('❌ Error en listener:', err);
         });

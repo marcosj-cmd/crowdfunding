@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -96,9 +97,9 @@ export default function ConnectMetamask() {
       console.error("MetaMask connect error:", err);
 
       if ((err && (err as any).code === 4001) || String(msg).toLowerCase().includes("user rejected") || String(msg).includes("4001")) {
-        window.alert("MetaMask request was rejected by the user.");
+        toast.warning("MetaMask request was rejected by the user.");
       } else {
-        window.alert(`MetaMask connection error: ${msg}`);
+        toast.error(`MetaMask connection error: ${msg}`);
       }
     } finally {
       setConnecting(false);
@@ -119,7 +120,7 @@ export default function ConnectMetamask() {
       // ignore
     }
 
-    window.alert("Disconnected from app. To fully remove permissions, disconnect the site from your MetaMask account in the wallet UI.");
+    toast.info("Disconnected from app. To fully remove permissions, disconnect the site from your MetaMask account in the wallet UI.");
   };
   
   const switchToSepolia = async () => {
