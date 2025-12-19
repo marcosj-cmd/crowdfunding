@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/useWallet";
 import { uploadCampaignToIPFS } from "@/api/ipfs";
 import { createCampaign } from "@/api/blockchain";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Create() {
   const { account, connectWallet, isConnecting } = useWallet();
+  const { toast } = useToast();
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -47,23 +49,23 @@ export default function Create() {
 
     try {
       // 1. Subir imagen a IPFS
-      alert("Uploading image to IPFS...");
+      toast({ title: "Subiendo imagen", description: "Subiendo imagen a IPFS..." });
       const { uploadImageToIPFS, uploadMetadataToIPFS } = await import("@/api/ipfs");
       const imageIpfsUri = await uploadImageToIPFS(imageFile!);
-      
+
       // 2. Crear metadata JSON
       const metadata = {
         name: title,
         description: description,
         image: imageIpfsUri
       };
-      
+
       // 3. Subir metadata a IPFS
-      alert("Uploading metadata to IPFS...");
+      toast({ title: "Subiendo metadata", description: "Subiendo metadata a IPFS..." });
       const metadataUri = await uploadMetadataToIPFS(metadata);
-      
+
       // 4. Crear campaña en blockchain (MetaMask valida la red automáticamente)
-      alert("Creating campaign on blockchain... Please confirm in MetaMask!");
+      toast({ title: "Creando campaña", description: "Confirma la transacción en MetaMask" });
       const tx = await createCampaign({
         title,
         description,
@@ -71,23 +73,23 @@ export default function Create() {
         days,
         metadataUri
       });
-      
-      alert("Transaction sent! Waiting for confirmation...");
+
+      toast({ title: "Transacción enviada", description: "Esperando confirmación..." });
       await tx.wait();
-      
-      alert(`✅ Campaign created successfully!\nIPFS: ${metadataUri}`);
-      
+
+      toast({ title: "✅ Éxito", description: "Campaña creada correctamente" });
+
       // Limpiar formulario
       setTitle("");
       setDescription("");
       setGoal("");
       setDays("");
       setImageFile(null);
-      
+
     } catch (err: any) {
       console.error("Error creating campaign:", err);
       const errorMessage = err?.message || err?.toString() || "Unknown error";
-      alert("❌ Error: " + errorMessage);
+      toast({ title: "❌ Error", description: errorMessage, variant: "destructive" });
       setError(errorMessage);
     } finally {
       setCreating(false);

@@ -6,9 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/useWallet";
 import { getCampaignsByOwner } from "@/api/backend";
 import { withdrawFunds } from "@/api/blockchain";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MyCampaigns() {
   const { account } = useWallet();
+  const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
   const { data, isLoading, refetch } = useQuery({
@@ -28,13 +30,13 @@ export default function MyCampaigns() {
   const handleWithdraw = async (id: number) => {
     try {
       const tx = await withdrawFunds(id);
-      alert("Withdraw en proceso...");
+      toast({ title: "Procesando", description: "Withdraw en proceso..." });
       await tx.wait();
-      alert("✅ Withdraw realizado con éxito");
+      toast({ title: "✅ Éxito", description: "Withdraw realizado con éxito" });
       await refetch();
     } catch (err: any) {
       console.error("Error al hacer withdraw:", err);
-      alert("❌ Error: " + (err?.message || err));
+      toast({ title: "❌ Error", description: err?.message || err, variant: "destructive" });
     }
   };
 

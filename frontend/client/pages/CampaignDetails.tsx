@@ -4,11 +4,11 @@ import { contributeToCampaign, refundContribution } from "@/api/blockchain";
 import { getCampaignById, getContributionsByOwner } from "@/api/backend";
 import { getConnectedAccount } from "@/lib/contract";
 import { Button } from "@/components/ui/button";
-
-
+import { useToast } from "@/hooks/use-toast";
 
 export default function CampaignDetails() {
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
   const [campaign, setCampaign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +49,9 @@ export default function CampaignDetails() {
     try {
       setRefundLoading(true);
       await refundContribution(Number(id));
-      window.alert("Reembolso solicitado correctamente");
-    } catch (err) {
-      window.alert("Error al solicitar refund: " + (err?.message || err));
+      toast({ title: "✅ Éxito", description: "Reembolso solicitado correctamente" });
+    } catch (err: any) {
+      toast({ title: "❌ Error", description: "Error al solicitar refund: " + (err?.message || err), variant: "destructive" });
     } finally {
       setRefundLoading(false);
     }
@@ -60,16 +60,16 @@ export default function CampaignDetails() {
   // Handler para contribuir
   const handleContribute = async () => {
     if (!id || !amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      window.alert("Ingresa un monto válido en ETH");
+      toast({ title: "⚠️ Atención", description: "Ingresa un monto válido en ETH", variant: "destructive" });
       return;
     }
     try {
       // Deshabilitar el botón mientras se procesa
       setLoading(true);
       await contributeToCampaign(Number(id), amount);
-      window.alert("¡Contribución enviada correctamente!");
-    } catch (err) {
-      window.alert("Error al contribuir: " + (err?.message || err));
+      toast({ title: "✅ Éxito", description: "¡Contribución enviada correctamente!" });
+    } catch (err: any) {
+      toast({ title: "❌ Error", description: "Error al contribuir: " + (err?.message || err), variant: "destructive" });
     } finally {
       setLoading(false);
     }

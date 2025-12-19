@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -9,6 +10,7 @@ export default function ConnectMetamask() {
   const [account, setAccount] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [chainId, setChainId] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 en hexadecimal
   const isWrongNetwork = chainId && chainId !== SEPOLIA_CHAIN_ID;
@@ -96,9 +98,9 @@ export default function ConnectMetamask() {
       console.error("MetaMask connect error:", err);
 
       if ((err && (err as any).code === 4001) || String(msg).toLowerCase().includes("user rejected") || String(msg).includes("4001")) {
-        window.alert("MetaMask request was rejected by the user.");
+        toast({ title: "Rechazado", description: "La solicitud de MetaMask fue rechazada", variant: "destructive" });
       } else {
-        window.alert(`MetaMask connection error: ${msg}`);
+        toast({ title: "❌ Error", description: `Error de conexión: ${msg}`, variant: "destructive" });
       }
     } finally {
       setConnecting(false);
@@ -119,7 +121,7 @@ export default function ConnectMetamask() {
       // ignore
     }
 
-    window.alert("Disconnected from app. To fully remove permissions, disconnect the site from your MetaMask account in the wallet UI.");
+    toast({ title: "Desconectado", description: "Para eliminar permisos completamente, desconecta el sitio desde MetaMask" });
   };
   
   const switchToSepolia = async () => {
