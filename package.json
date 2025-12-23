@@ -1,0 +1,26 @@
+{
+  "name": "crowdfunding-indexer",
+  "version": "1.0.0",
+  "main": "backend/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node backend/index.js",
+    "dev": "nodemon backend/index.js",
+    "build": "cd frontend && npm run build:client",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix frontend && npm run build --prefix frontend"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.10.0",
+    "express": "^4.21.2",
+    "mongoose": "^7.8.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  },
+"engines": {
+  "node": "20.x"
+}}
+
